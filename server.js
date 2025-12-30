@@ -16,9 +16,10 @@ connectDB();
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 /* CORS */
 const allowedOrigins = [
-  "https://magic-world.vercel.app",   // ✅ YOUR ACTUAL FRONTEND
   "https://magicworldofficial.vercel.app",
   "http://localhost:3000",
 ];
