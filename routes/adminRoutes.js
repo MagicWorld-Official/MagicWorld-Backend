@@ -7,12 +7,15 @@ import adminAuth from "../middleware/adminAuth.js";
 const router = express.Router();
 
 /* ================================
-   ADMIN LOGIN
+   SESSION CHECK
 ================================ */
 router.get("/me", adminAuth, (req, res) => {
   res.json({ success: true, admin: req.admin });
 });
 
+/* ================================
+   LOGIN
+================================ */
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -39,10 +42,10 @@ router.post("/login", async (req, res) => {
 
     res.cookie("adminToken", token, {
       httpOnly: true,
-      secure: true,        // MUST be true in production
-      sameSite: "none",    // REQUIRED for cross-site
+      secure: true,
+      sameSite: "none",
       path: "/",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 24 * 60 * 60 * 1000,
     });
 
     res.json({ success: true });
@@ -52,11 +55,17 @@ router.post("/login", async (req, res) => {
   }
 });
 
+/* ================================
+   LOGOUT
+================================ */
 router.post("/logout", (req, res) => {
   res.clearCookie("adminToken", {
     httpOnly: true,
+    secure: true,
+    sameSite: "none",
     path: "/",
   });
+
   res.json({ success: true });
 });
 
