@@ -17,9 +17,20 @@ connectDB();
 const app = express();
 
 /* CORS */
+const allowedOrigins = [
+  "https://magicworldofficial.vercel.app",
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS blocked"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
