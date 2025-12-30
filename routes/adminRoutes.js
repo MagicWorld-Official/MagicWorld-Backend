@@ -39,8 +39,8 @@ router.post("/login", async (req, res) => {
 
     res.cookie("adminToken", token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
     });
 

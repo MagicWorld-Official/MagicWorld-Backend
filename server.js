@@ -16,9 +16,6 @@ connectDB();
 
 const app = express();
 
-/* 🔑 TRUST PROXY (REQUIRED FOR RENDER / SECURE COOKIES) */
-app.set("trust proxy", 1);
-
 /* CORS */
 const allowedOrigins = [
   "https://magicworldofficial.vercel.app",
