@@ -18,6 +18,7 @@ const app = express();
 
 /* CORS */
 const allowedOrigins = [
+  "https://magic-world.vercel.app",   // ✅ YOUR ACTUAL FRONTEND
   "https://magicworldofficial.vercel.app",
   "http://localhost:3000",
 ];
