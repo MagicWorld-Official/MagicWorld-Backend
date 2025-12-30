@@ -14,7 +14,7 @@ router.get("/me", adminAuth, (req, res) => {
 });
 
 /* ================================
-   LOGIN
+   LOGIN (NO COOKIE)
 ================================ */
 router.post("/login", async (req, res) => {
   try {
@@ -40,15 +40,11 @@ router.post("/login", async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.cookie("adminToken", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      path: "/",
-      maxAge: 24 * 60 * 60 * 1000,
+    // 🔐 Return token instead of cookie
+    res.json({
+      success: true,
+      token,
     });
-
-    res.json({ success: true });
   } catch (err) {
     console.error("Admin login error:", err.message);
     res.status(500).json({ success: false });
@@ -56,16 +52,10 @@ router.post("/login", async (req, res) => {
 });
 
 /* ================================
-   LOGOUT
+   LOGOUT (CLIENT SIDE ONLY)
 ================================ */
 router.post("/logout", (req, res) => {
-  res.clearCookie("adminToken", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/",
-  });
-
+  // Nothing to do server-side anymore
   res.json({ success: true });
 });
 
