@@ -1,43 +1,46 @@
 import Product from "../models/Product.js";
 
-// Validate features structure so admin doesn't break UI
+// Sanitize features data to prevent bad input from breaking frontend
 function sanitizeFeatures(raw = {}) {
   const clean = {};
 
-  for (const key of Object.keys(raw)) {
-    const sections = Array.isArray(raw[key]) ? raw[key] : [];
+  for (const category of Object.keys(raw)) {
+    const sections = Array.isArray(raw[category]) ? raw[category] : [];
 
-    clean[key] = sections.map(section => ({
-      title: String(section.title || ""),
-      items: Array.isArray(section.items)
-        ? section.items.map(i => String(i))
-        : []
-    }));
+    clean[category] = sections
+      .filter((sec) => sec && typeof sec.title === "string")
+      .map((sec) => ({
+        title: String(sec.title || "").trim(),
+        items: Array.isArray(sec.items)
+          ? sec.items.map((item) => String(item || "").trim()).filter(Boolean)
+          : [],
+      }))
+      .filter((sec) => sec.title); // remove empty titles
   }
 
   return clean;
 }
 
-/* 🌍 Public: Get all products */
+/* 🌍 PUBLIC: Get all products (list view) */
+/* Get all products (list view) */
 export const getProducts = async (req, res) => {
   try {
-    const products = await Product.find(
-      {},
-      "name slug desc prices featuresEnabled featuresData statusEnabled statusLabel image"
-    ).sort({ createdAt: -1 });
+    const products = await Product.find({})
+      .select("_id name slug desc image prices featuresEnabled statusEnabled statusLabel version size updated category type downloadLink featuresData")
+      .sort({ createdAt: -1 });
 
     res.json({ success: true, products });
-  } catch {
-    res.status(500).json({ success: false, message: "Cannot fetch products" });
+  } catch (error) {
+    console.error("getProducts error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch products" });
   }
 };
 
-/* 🌍 Public: Get single product (FIXED) */
+/* 🌍 PUBLIC: Get single product by slug (detail page) */
 export const getProduct = async (req, res) => {
   try {
     const { slug } = req.params;
 
-    // ⬅️ IMPORTANT CHANGE: return FULL product
     const product = await Product.findOne({ slug });
 
     if (!product) {
@@ -45,32 +48,92 @@ export const getProduct = async (req, res) => {
     }
 
     res.json({ success: true, product });
-  } catch {
-    res.status(500).json({ success: false, message: "Cannot fetch product" });
+  } catch (error) {
+    console.error("getProduct error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch product" });
   }
 };
 
-/* 🔐 Admin: Create product */
+/* 🔐 ADMIN: Create new product */
 export const createProduct = async (req, res) => {
   try {
     const {
       name,
       slug,
-      desc,
-      image,
-      version,
-      size,
-      updated,
-      category,
-      statusEnabled,
-      statusLabel,
-      prices,
-      downloadLink,
-      featuresEnabled,
-      featuresData,
+      desc = "",
+      image = "",
+      version = "",
+      size = "",
+      updated = "",
+      category = "",
+      type = "",
+      statusEnabled = false,
+      statusLabel = "",
+      prices = { day: 0, week: 0 },
+      downloadLink = "",
+      featuresEnabled = false,
+      featuresData = {},
     } = req.body;
 
-    const product = new Product({
+    // Required fields
+    if (!name?.trim() || !slug?.trim() || !image?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, slug, and image URL are required",
+      });
+    }
+
+    const newProduct = new Product({
+      name: name.trim(),
+      slug: slug.trim().toLowerCase(),
+      desc: desc.trim(),
+      image: image.trim(),
+      version: version.trim(),
+      size: size.trim(),
+      updated: updated.trim(),
+      category: category.trim(),
+      type: type.trim(),
+      statusEnabled: Boolean(statusEnabled),
+      statusLabel: statusLabel.trim(),
+      prices: {
+        day: Number(prices.day) || 0,
+        week: Number(prices.week) || 0,
+      },
+      downloadLink: downloadLink.trim(),
+      featuresEnabled: Boolean(featuresEnabled),
+      featuresData: sanitizeFeatures(featuresData),
+    });
+
+    await newProduct.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      product: newProduct,
+    });
+  } catch (error) {
+    console.error("createProduct error:", error);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Slug already exists. Choose a different slug.",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to create product",
+    });
+  }
+};
+
+/* 🔐 ADMIN: Update product by id */
+export const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const {
       name,
       slug,
       desc,
@@ -79,42 +142,7 @@ export const createProduct = async (req, res) => {
       size,
       updated,
       category,
-
-      /* ✅ NEW STATUS FIELDS */
-      statusEnabled: Boolean(statusEnabled),
-      statusLabel: statusLabel || "",
-
-      prices: {
-        day: prices?.day || 0,
-        week: prices?.week || 0,
-      },
-
-      downloadLink: downloadLink || "",
-      featuresEnabled: Boolean(featuresEnabled),
-      featuresData: sanitizeFeatures(featuresData),
-    });
-
-    await product.save();
-
-    res.json({ success: true, product });
-  } catch {
-    res.status(400).json({ success: false, message: "Cannot add product" });
-  }
-};
-
-/* 🔐 Admin: Update product */
-export const updateProduct = async (req, res) => {
-  try {
-    const { slug } = req.params;
-
-    const {
-      name,
-      desc,
-      image,
-      version,
-      size,
-      updated,
-      category,
+      type,
       statusEnabled,
       statusLabel,
       prices,
@@ -123,56 +151,87 @@ export const updateProduct = async (req, res) => {
       featuresData,
     } = req.body;
 
-    const updatedProduct = await Product.findOneAndUpdate(
-      { slug },
-      {
-        name,
-        desc,
-        image,
-        version,
-        size,
-        updated,
-        category,
+    const updateData = {};
 
-        /* ✅ NEW STATUS FIELDS */
-        statusEnabled: Boolean(statusEnabled),
-        statusLabel: statusLabel || "",
+    if (name?.trim()) updateData.name = name.trim();
+    if (slug?.trim()) updateData.slug = slug.trim().toLowerCase();
+    if (desc !== undefined) updateData.desc = (desc || "").trim();
+    if (image !== undefined) updateData.image = (image || "").trim();
+    if (version !== undefined) updateData.version = (version || "").trim();
+    if (size !== undefined) updateData.size = (size || "").trim();
+    if (updated !== undefined) updateData.updated = (updated || "").trim();
+    if (category !== undefined) updateData.category = (category || "").trim();
+    if (type !== undefined) updateData.type = (type || "").trim();
+    if (statusEnabled !== undefined) updateData.statusEnabled = Boolean(statusEnabled);
+    if (statusLabel !== undefined) updateData.statusLabel = (statusLabel || "").trim();
+    if (prices !== undefined) {
+      updateData.prices = {
+        day: Number(prices.day) || 0,
+        week: Number(prices.week) || 0,
+      };
+    }
+    if (downloadLink !== undefined) updateData.downloadLink = (downloadLink || "").trim();
+    if (featuresEnabled !== undefined) updateData.featuresEnabled = Boolean(featuresEnabled);
+    if (featuresData !== undefined) updateData.featuresData = sanitizeFeatures(featuresData);
 
-        prices: {
-          day: prices?.day || 0,
-          week: prices?.week || 0,
-        },
-
-        downloadLink: downloadLink || "",
-        featuresEnabled: Boolean(featuresEnabled),
-        featuresData: sanitizeFeatures(featuresData),
-      },
-      { new: true }
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
     );
 
     if (!updatedProduct) {
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
     }
 
-    res.json({ success: true, product: updatedProduct });
-  } catch {
-    res.status(500).json({ success: false, message: "Error updating product" });
+    res.json({
+      success: true,
+      message: "Product updated successfully",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error("updateProduct error:", error);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "This slug is already in use",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to update product",
+    });
   }
 };
 
-/* 🔐 Admin: Delete product */
+/* 🔐 ADMIN: Delete product by id */
 export const deleteProduct = async (req, res) => {
   try {
-    const { slug } = req.params;
+    const { id } = req.params;
 
-    const deleted = await Product.findOneAndDelete({ slug });
+    const deleted = await Product.findByIdAndDelete(id);
 
     if (!deleted) {
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
     }
 
-    res.json({ success: true, message: "Product deleted" });
-  } catch {
-    res.status(500).json({ success: false, message: "Error deleting product" });
+    res.json({
+      success: true,
+      message: "Product deleted successfully",
+    });
+  } catch (error) {
+    console.error("deleteProduct error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete product",
+    });
   }
 };

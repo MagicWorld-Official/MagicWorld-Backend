@@ -46,6 +46,12 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
+    type: {
+      type: String,
+      enum: ["mods", "games"],
+      trim: true,
+    },
+
     /* ✅ STATUS */
     statusEnabled: {
       type: Boolean,

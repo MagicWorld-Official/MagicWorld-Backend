@@ -4,20 +4,20 @@ import {
   getProduct,
   createProduct,
   deleteProduct,
-  updateProduct
+  updateProduct,
 } from "../controllers/productController.js";
 
 import adminAuth from "../middleware/adminAuth.js";
 
 const router = express.Router();
 
-/* 🌍 PUBLIC ROUTES */
-router.get("/", getProducts);
-router.get("/:slug", getProduct);
+/* 🌍 PUBLIC ROUTES - Use slug (user-friendly) */
+router.get("/", getProducts);                    // Get all products
+router.get("/:slug", getProduct);                // Get single product by slug
 
-/* 🔐 ADMIN ROUTES */
-router.post("/", adminAuth, createProduct);
-router.put("/:slug", adminAuth, updateProduct);
-router.delete("/:slug", adminAuth, deleteProduct);
+/* 🔐 ADMIN ROUTES - Use _id (secure & reliable) */
+router.post("/", adminAuth, createProduct);      // Create new product
+router.put("/:id", adminAuth, updateProduct);    // ← Changed to :id
+router.delete("/:id", adminAuth, deleteProduct); // ← Changed to :id
 
 export default router;
