@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import adminRoutes from "./routes/adminRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
 import premiumAccountRoutes from "./routes/premiumAccountRoutes.js";
 
 dotenv.config();
@@ -57,6 +58,7 @@ app.use("/uploads", express.static("uploads"));
 app.use("/admin", adminRoutes);
 app.use("/orders", orderRoutes);
 app.use("/products", productRoutes);
+app.use("/contact", contactRoutes);
 app.use("/premium-accounts", premiumAccountRoutes);
 
 /* ===============================
