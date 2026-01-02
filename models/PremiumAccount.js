@@ -1,3 +1,4 @@
+// models/PremiumAccount.js
 import mongoose from "mongoose";
 
 const premiumAccountSchema = new mongoose.Schema(
@@ -48,10 +49,20 @@ const premiumAccountSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    // NEW: Account type for filtering
+    type: {
+      type: String,
+      enum: ["Social", "Game"],
+      required: true,
+      trim: true,
+    },
   },
   { timestamps: true }
 );
 
 premiumAccountSchema.index({ slug: 1 }, { unique: true });
+// Optional: index for faster searches
+premiumAccountSchema.index({ title: "text", desc: "text" });
 
 export default mongoose.model("PremiumAccount", premiumAccountSchema);
